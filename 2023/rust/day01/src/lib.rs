@@ -7,6 +7,10 @@ pub fn get_calibration_value(input: &str) -> u64 {
         .collect::<Vec<char>>();
 
     let nums_len = nums.len();
+    assert!(
+        nums_len.gt(&0),
+        "ascii digits must be present in the input: {input}",
+    );
 
     format!("{}{}", nums[0], nums[nums_len - 1])
         .parse::<u64>()
@@ -55,7 +59,13 @@ pub fn get_real_calibration_value(input: &str) -> u64 {
         skip += 1;
     }
 
-    format!("{}{}", nums[0], nums[nums.len() - 1])
+    let nums_len = nums.len();
+    assert!(
+        nums_len.gt(&0),
+        "ascii digits must be present in the input: {input}",
+    );
+
+    format!("{}{}", nums[0], nums[nums_len - 1])
         .parse::<u64>()
         .expect("should always be an int")
 }
