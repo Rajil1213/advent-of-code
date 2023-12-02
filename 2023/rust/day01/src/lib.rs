@@ -35,7 +35,7 @@ pub fn get_real_calibration_value(input: &str) -> u64 {
 
     let mut skip = 0;
     while skip < input_len {
-        let rest = input.chars().skip(skip).collect::<String>();
+        let rest = &input[skip..];
 
         let first_char = rest
             .chars()
