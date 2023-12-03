@@ -37,6 +37,9 @@ dependencies = [
 [[package]]
 name = "day03"
 version = "0.1.0"
+dependencies = [
+ "rstest",
+]
 
 [[package]]
 name = "futures"
