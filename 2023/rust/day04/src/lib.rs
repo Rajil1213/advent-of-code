@@ -67,16 +67,15 @@ pub fn calculate_total_cards(input: &str) -> usize {
         }
 
         // count the original
-        card_to_copies
+        let current_copies = card_to_copies
             .entry(card_num)
             .and_modify(|e| *e += 1)
-            .or_insert(1);
-
-        // each copy of the current card adds to the overall total
-        let current_copies = card_to_copies.get(&card_num).unwrap_or(&1).to_owned();
+            .or_insert(1)
+            .to_owned();
 
         // insert or increment the copies for card number
         // on all subsequent cards for each point won
+        // each copy of the current card contributes to the total
         for i in 1..winning_cards_in_hand + 1 {
             card_to_copies
                 .entry(card_num + i)
@@ -119,6 +118,3 @@ Card 6: 31 18 13 56 72 | 74 77 10 23 35 67 36 11";
         assert_eq!(calculate_total_cards(input), 44);
     }
 }
-
-
-
