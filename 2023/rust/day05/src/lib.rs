@@ -86,6 +86,37 @@ pub fn get_map(line: &str) -> CategoryMap {
 
     CategoryMap { src, dst, range }
 }
+
+pub fn get_groups_of_two(input_vec: Vec<usize>) -> Vec<(usize, usize)> {
+    let length = input_vec.len();
+    assert_eq!(length % 2, 0);
+
+    let mut grouped_vec: Vec<(usize, usize)> = Vec::with_capacity(length / 2);
+    for i in (0..length).step_by(2) {
+        grouped_vec.push((input_vec[i], input_vec[i + 1]))
+    }
+
+    grouped_vec
+}
+
+pub fn find_nearest_from_ranges(
+    input: Vec<(usize, usize)>,
+    maps: &[Vec<CategoryMap>; NUM_MAPS as usize],
+) -> usize {
+    let mut nearest_location = usize::MAX;
+
+    for (starting, length) in input {
+        for seed in starting..starting + length {
+            let location = find_mapped_value(maps, seed);
+            if location.lt(&nearest_location) {
+                nearest_location = location;
+            }
+        }
+    }
+
+    nearest_location
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,5 +173,51 @@ humidity-to-location map:
         }
 
         assert_eq!(min_location, 35);
+    }
+
+    #[test]
+    fn find_nearest_location_from_range_correctly() {
+        let contents = "seeds: 79 14 55 13
+
+seed-to-soil map:
+50 98 2
+52 50 48
+
+soil-to-fertilizer map:
+0 15 37
+37 52 2
+39 0 15
+
+fertilizer-to-water map:
+49 53 8
+0 11 42
+42 0 7
+57 7 4
+
+water-to-light map:
+88 18 7
+18 25 70
+
+light-to-temperature map:
+45 77 23
+81 45 19
+68 64 13
+
+temperature-to-humidity map:
+0 69 1
+1 0 69
+
+humidity-to-location map:
+60 56 37
+56 93 4";
+        let first_line = contents.lines().next().unwrap();
+        let full_input = contents.lines().collect::<Vec<&str>>();
+
+        let seed_ranges = get_groups_of_two(get_seeds(first_line));
+        let maps = parse_map_lines(full_input);
+
+        let min_location = find_nearest_from_ranges(seed_ranges, &maps);
+
+        assert_eq!(min_location, 46);
     }
 }
