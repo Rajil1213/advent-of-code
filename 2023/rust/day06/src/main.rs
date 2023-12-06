@@ -66,7 +66,7 @@ fn part_two(path: &str) {
         .filter(|v| !v.is_empty())
         .collect::<String>()
         .parse::<usize>()
-        .expect("must be a vali number");
+        .expect("must be a valid number");
 
     let distance_to_beat = lines[1]
         .split(':')
@@ -76,7 +76,7 @@ fn part_two(path: &str) {
         .filter(|v| !v.is_empty())
         .collect::<String>()
         .parse::<usize>()
-        .expect("must be a number");
+        .expect("must be a valid number");
 
     let num_ways_to_win = ways_to_win(distance_to_beat, total_race_time);
 

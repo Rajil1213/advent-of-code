@@ -5,9 +5,7 @@ pub fn ways_to_win(distance_to_beat: usize, total_race_time: usize) -> usize {
         .expect("max charging time should exist");
 
     assert!(max_charging_time.ge(&min_charging_time));
-    (min_charging_time..=max_charging_time)
-        .collect::<Vec<usize>>()
-        .len()
+    max_charging_time - min_charging_time + 1
 }
 
 fn get_min_charging_time(distance_to_beat: usize, total_race_time: usize) -> Option<usize> {
