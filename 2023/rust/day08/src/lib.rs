@@ -236,7 +236,6 @@ ZZZ = (ZZZ, ZZZ)";
         assert_eq!(num_steps, expected_num_steps);
     }
 
-    #[allow(unused)]
     #[test]
     fn find_sync_steps_correctly() {
         let instruction_set = InstructionSet::from_str("LR").expect("directions must be valid");
