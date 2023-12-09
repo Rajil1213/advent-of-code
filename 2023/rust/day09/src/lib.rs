@@ -3,7 +3,7 @@ pub fn get_next_value(list: &Vec<i64>) -> i64 {
     let mut diff_nums: Vec<i64> = Vec::with_capacity(length - 1);
 
     assert!(
-        length.ge(&1),
+        length.gt(&1),
         "fatal error: reached end without getting constant diff"
     );
 
@@ -24,7 +24,7 @@ pub fn get_previous_value(list: &Vec<i64>) -> i64 {
     let mut diff_nums: Vec<i64> = Vec::with_capacity(length - 1);
 
     assert!(
-        length.ge(&1),
+        length.gt(&1),
         "fatal error: reached end without getting constant diff"
     );
 
