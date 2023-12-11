@@ -4,7 +4,7 @@ use std::collections::HashMap;
 pub struct Position(usize, usize);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub enum Kind {
+pub enum Node {
     Vertical(Position),
     Horizontal(Position),
     L(Position),
@@ -15,182 +15,310 @@ pub enum Kind {
     S(Position),
 }
 
-impl Kind {
-    pub fn from(chr: &char, position: Position) -> Kind {
+#[derive(Debug)]
+pub enum Direction {
+    North,
+    South,
+    East,
+    West,
+}
+
+impl Node {
+    pub fn from(chr: &char, position: Position) -> Node {
         match chr {
-            '|' => Kind::Vertical(position),
-            '-' => Kind::Horizontal(position),
-            'L' => Kind::L(position),
-            'J' => Kind::J(position),
-            '7' => Kind::Seven(position),
-            'F' => Kind::F(position),
-            '.' => Kind::Dot(position),
-            'S' => Kind::S(position),
+            '|' => Node::Vertical(position),
+            '-' => Node::Horizontal(position),
+            'L' => Node::L(position),
+            'J' => Node::J(position),
+            '7' => Node::Seven(position),
+            'F' => Node::F(position),
+            '.' => Node::Dot(position),
+            'S' => Node::S(position),
             _ => panic!("Unparsable character: {chr}"),
         }
     }
 
-    pub fn is_connected_to(&self, other: &Self) -> bool {
+    pub fn is_connected_to(&self, other: &Self, direction: &Direction) -> bool {
+        if self == other {
+            return false;
+        }
+
         match self {
-            // vertical matches a node if they line up vertically, and one apart horizontally
-            Self::Vertical(Position(x, y)) => match other {
-                Self::L(Position(other_x, other_y)) => {
-                    y == other_y && x.saturating_sub(*other_x).eq(&1)
-                } // | above L
-                Self::J(Position(other_x, other_y)) => {
-                    y == other_y && x.saturating_sub(*other_x).eq(&1)
-                } // | above J
-                Self::Seven(Position(other_x, other_y)) => {
-                    y == other_y && other_x.saturating_sub(*x).eq(&1)
-                } // 7 above |
-                Self::F(Position(other_x, other_y)) => {
-                    y == other_y && other_x.saturating_sub(*x).eq(&1)
-                } // F above |
+            Node::S(_) => match direction {
+                Direction::North => {
+                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                }
+                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
+                Direction::East => {
+                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                }
+                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
+            },
+            Node::Vertical(_) => match direction {
+                Direction::North => {
+                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                }
+                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
                 _ => false,
             },
-            // Horizontal matches a node if they line up horizontally, and one apart vertically
-            Self::Horizontal(Position(x, y)) => match other {
-                Self::L(Position(other_x, other_y)) => {
-                    x == other_x && other_y.saturating_sub(*y).eq(&1)
-                } // L-
-                Self::J(Position(other_x, other_y)) => {
-                    x == other_x && y.saturating_sub(*other_y).eq(&1)
-                } // -J
-                Self::Seven(Position(other_x, other_y)) => {
-                    x == other_x && y.saturating_sub(*other_y).eq(&1)
-                } // -7
-                Self::F(Position(other_x, other_y)) => {
-                    x == other_x && other_y.saturating_sub(*other_y).eq(&1)
-                } // F-
+            Node::Horizontal(_) => match direction {
+                Direction::East => {
+                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                }
+                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
                 _ => false,
             },
-            // the remaining two are trickier, plot graphically to understand
-            Self::L(Position(x, y)) => match other {
-                Self::Seven(Position(other_x, other_y)) => {
-                    (y == other_y && other_x.saturating_sub(*x).eq(&1))
-                        || (x == other_x && other_y.saturating_sub(*y).eq(&0))
-                } // 7 above L or L7
-                Self::F(Position(other_x, other_y)) => {
-                    y == other_y && other_x.saturating_sub(*x).eq(&1)
-                } // F above L
+            Node::L(_) => match direction {
+                Direction::North => {
+                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                }
+                Direction::East => {
+                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                }
                 _ => false,
             },
-            Self::J(Position(x, y)) => match other {
-                Self::Seven(Position(other_x, other_y)) => {
-                    y == other_y && other_x.saturating_sub(*x).eq(&1)
-                } // 7 above J
-                Self::F(Position(other_x, other_y)) => {
-                    (y == other_y && other_x.saturating_sub(*x).eq(&1))
-                        || (x == other_x && y.saturating_sub(*other_y).eq(&1))
-                } // F above J or FJ
+            Node::J(_) => match direction {
+                Direction::North => {
+                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                }
+                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
                 _ => false,
             },
-            Self::Dot(_pos) => false,
-            Self::S(Position(x, y)) => match other {
-                Self::Horizontal(Position(other_x, other_y)) => {
-                    x.eq(other_x) && y.abs_diff(*other_y).eq(&1)
-                } // -S-
-                Self::Vertical(Position(other_x, other_y)) => {
-                    y.eq(other_y) && x.abs_diff(*other_x).eq(&1)
-                } // | above S or S above |
-                Self::L(Position(other_x, other_y)) => {
-                    (y == other_y && other_x.saturating_sub(*x).eq(&1))
-                        || (x == other_x && other_y.saturating_sub(*y).eq(&0))
-                } // S above L or L7
-                Self::J(Position(other_x, other_y)) => {
-                    (y == other_y && other_x.saturating_sub(*x).eq(&1))
-                        || (x == other_x && y.saturating_sub(*other_y).eq(&1))
-                } // S above J or SJ
-                Self::Seven(Position(other_x, other_y)) => {
-                    (x.eq(other_x) && other_y.saturating_sub(*y).eq(&1))
-                        || (y.eq(other_y) && other_x.saturating_sub(*x).eq(&1))
-                } // S7 or 7 above S
-                Self::F(Position(other_x, other_y)) => {
-                    (x.eq(other_x) && y.saturating_sub(*other_y).eq(&1))
-                        || (y.eq(other_y) && x.saturating_sub(*other_x).eq(&1))
-                } // FS or F above S
+            Node::Seven(_) => match direction {
+                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
+                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
                 _ => false,
             },
-            // we've written up the logic for one side, for the reverse side, do the reverse
-            _ => other.is_connected_to(self),
+            Node::F(_) => match direction {
+                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
+                Direction::East => {
+                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                }
+                _ => false,
+            },
+            Node::Dot(_) => false,
         }
     }
 
     pub fn position(&self) -> &Position {
         match self {
             Self::Horizontal(pos) => pos,
-            Kind::Vertical(pos) => pos,
-            Kind::L(pos) => pos,
-            Kind::J(pos) => pos,
-            Kind::Seven(pos) => pos,
-            Kind::F(pos) => pos,
-            Kind::Dot(pos) => pos,
-            Kind::S(pos) => pos,
+            Node::Vertical(pos) => pos,
+            Node::L(pos) => pos,
+            Node::J(pos) => pos,
+            Node::Seven(pos) => pos,
+            Node::F(pos) => pos,
+            Node::Dot(pos) => pos,
+            Node::S(pos) => pos,
         }
     }
-}
 
-#[derive(Debug, Hash, Clone)]
-pub struct Node {
-    pub kind: Kind,
-    pub visited: bool,
-    pub explored: bool,
-}
-
-impl Node {
-    pub fn neighbors(&self, graph: &HashMap<Position, Node>, max_pos: Position) -> Vec<Node> {
-        let Position(x, y) = self.kind.position();
+    pub fn neighbors(&self, graph: &[Node], max_pos: Position) -> Vec<Node> {
+        let Position(x, y) = self.position();
         let Position(max_x, max_y) = max_pos;
-        let current_kind = &graph
-            .get(&Position(*x, *y))
-            .unwrap_or_else(|| panic!("{x},{y} must exist"))
-            .kind;
+        let current_node = &graph[x * max_x + y];
+        // dbg!(current_node);
 
-        let (up, down, left, right) = (
-            Position(if x + 1 > max_x { max_x - 1 } else { x + 1 }, *y),
-            Position(x.saturating_sub(1), *y),
-            Position(*x, y.saturating_sub(1)),
-            Position(*x, if y + 1 > max_y { max_y - 1 } else { y + 1 }),
-        );
+        let (max_x, max_y) = (max_x as isize, max_y as isize);
 
-        let mut neighbors: Vec<Node> = Vec::with_capacity(4);
+        let relative_positions: [(isize, isize, Direction); 4] = [
+            (1, 0, Direction::South),
+            (-1, 0, Direction::North),
+            (0, 1, Direction::East),
+            (0, -1, Direction::West),
+        ];
 
-        let up_node = graph
-            .get(&up)
-            .unwrap_or_else(|| panic!("{up:?} must exist in graph"));
-        if up_node.kind.is_connected_to(current_kind) {
-            neighbors.push(up_node.clone());
+        let mut neighbors: Vec<Node> = vec![];
+
+        for (delta_x, delta_y, dir) in relative_positions.iter() {
+            let mut new_position_x = *x as isize + delta_x;
+            let mut new_position_y = *y as isize + delta_y;
+
+            if new_position_x == max_x {
+                new_position_x = max_x - 1;
+            }
+
+            if new_position_x < 0 {
+                new_position_x = 0;
+            }
+
+            if new_position_y < 0 {
+                new_position_y = 0;
+            }
+
+            if new_position_y == max_y {
+                new_position_y = max_y - 1;
+            }
+
+            let new_position_x = new_position_x as usize;
+            let new_position_y = new_position_y as usize;
+
+            let node_at_new_pos: &Node = &graph[new_position_x * max_y as usize + new_position_y];
+            // dbg!(new_position_x, new_position_y, dir, node_at_new_pos);
+
+            if current_node.is_connected_to(node_at_new_pos, dir) {
+                neighbors.push(node_at_new_pos.clone());
+            }
         }
 
-        let down_node = graph
-            .get(&down)
-            .unwrap_or_else(|| panic!("{down:?} must exist in graph"));
-        if down_node.kind.is_connected_to(current_kind) {
-            neighbors.push(down_node.clone());
-        }
-
-        let left_node = graph
-            .get(&left)
-            .unwrap_or_else(|| panic!("{left:?} must exist in graph"));
-        if left_node.kind.is_connected_to(current_kind) {
-            neighbors.push(left_node.clone());
-        }
-
-        let right_node = graph
-            .get(&right)
-            .unwrap_or_else(|| panic!("{right:?} must exist in graph"));
-        if right_node.kind.is_connected_to(current_kind) {
-            neighbors.push(right_node.clone());
+        if neighbors.len().gt(&2) {
+            println!("Spec violation: found node with more than two connections at ({x}, {y})");
         }
 
         neighbors
     }
 }
 
-pub fn load_graph(input: &str) -> HashMap<Position, Node> {
-    todo!();
+pub fn load_graph(input: &str) -> (Vec<Node>, Position) {
+    println!("Loading graph from input");
+    let num_rows = input.lines().collect::<Vec<&str>>().len();
+    let num_cols = input
+        .lines()
+        .next()
+        .expect("there must be at least one row to compute no. of columns")
+        .len();
+
+    // let mut graph: Vec<Node> = Vec::with_capacity(num_rows.saturating_mul(num_cols));
+    let mut graph: Vec<Node> = vec![];
+
+    for (row, line) in input.lines().enumerate() {
+        // dbg!(row);
+        for (col, chr) in line.chars().enumerate() {
+            // dbg!(col);
+            let pos = Position(row, col);
+            graph.push(Node::from(&chr, pos));
+        }
+    }
+
+    (graph, Position(num_rows, num_cols))
 }
 
-pub fn create_adjacency_graph(graph: &HashMap<Position, Node>) -> HashMap<Node, Vec<Node>> {
-    todo!();
+#[derive(Debug)]
+pub struct AdjacencyInfo {
+    neighbors: Vec<Node>,
+    explored: bool,
+}
+
+pub fn create_adjacency_graph(graph: &[Node], max_pos: Position) -> HashMap<Node, AdjacencyInfo> {
+    println!("Building adjacency graph from given graph");
+    let mut adj_graph: HashMap<Node, AdjacencyInfo> = HashMap::new();
+
+    for node in graph.iter() {
+        let neighbors = node.neighbors(graph, max_pos.clone());
+        adj_graph.entry(node.clone()).or_insert(AdjacencyInfo {
+            neighbors,
+            explored: false,
+        });
+    }
+
+    adj_graph
+}
+
+pub fn find_cycle_length(
+    starting_node: &Node,
+    parent_node: Option<&Node>,
+    current_node: Option<&Node>,
+    distance: usize,
+    adj_graph: &mut HashMap<Node, AdjacencyInfo>,
+) -> Option<usize> {
+    let mut local_distance = distance + 1;
+    let current_node = current_node.unwrap_or(starting_node);
+    let adjacency_info = adj_graph.get(current_node).unwrap_or_else(|| {
+        panic!(
+            "Node {:?} must be present in adj_graph",
+            starting_node.position()
+        )
+    });
+
+    if adjacency_info.explored {
+        return None;
+    }
+
+    let neighbors = adjacency_info.neighbors.clone();
+
+    for neighbor in neighbors.iter() {
+        if parent_node.is_some() && neighbor == parent_node.unwrap() {
+            continue;
+        }
+
+        if neighbor == starting_node {
+            println!("Found starting_node again at {:?}", current_node);
+            return Some(distance);
+        }
+
+        // go deeper
+        let distance_to_cycle = find_cycle_length(
+            starting_node,
+            Some(current_node),
+            Some(neighbor),
+            local_distance,
+            adj_graph,
+        );
+        if distance_to_cycle.is_some() {
+            return distance_to_cycle;
+        }
+
+        // if you haven't found it yet, you haven't travelled
+        local_distance = distance + 1;
+    }
+
+    // when we have inspect all of the current node's neighbors, it becomes explored
+    adj_graph
+        .entry(current_node.clone())
+        .and_modify(|v| v.explored = true);
+
+    // return original distance because none of the neighbors lead to the destination
+    Some(distance)
+}
+
+pub fn find_starting_node(graph: &[Node]) -> &Node {
+    for value in graph.iter() {
+        match value.clone() {
+            Node::S(_pos) => return value,
+            _ => continue,
+        }
+    }
+
+    unreachable!("starting node must be present");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_cycle_length_correctly() {
+        // Case 1:
+        let input: &str = "7-F7-
+.FJ|7
+SJLL7
+|F--J
+LJ.LJ";
+        let expected: usize = 15;
+        let (graph, max_pos) = load_graph(input);
+        let mut adj_graph = create_adjacency_graph(&graph, max_pos);
+
+        let starting_node = find_starting_node(&graph);
+
+        assert_eq!(
+            find_cycle_length(starting_node, None, None, 0, &mut adj_graph),
+            Some(expected)
+        );
+
+        // Case 2:
+        let input: &str = "-L|F7
+7S-7|
+L|7||
+-L-J|
+L|-JF";
+        let expected: usize = 7;
+        let (graph, max_pos) = load_graph(input);
+        let mut adj_graph = create_adjacency_graph(&graph, max_pos);
+        let starting_node = find_starting_node(&graph);
+
+        assert_eq!(
+            find_cycle_length(starting_node, None, None, 0, &mut adj_graph),
+            Some(expected)
+        );
+    }
 }
