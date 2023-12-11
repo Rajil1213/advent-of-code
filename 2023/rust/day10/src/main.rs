@@ -2,7 +2,7 @@ use std::fs;
 
 use day10::{
     calculate_double_loop_area, calculate_inner_tiles, create_adjacency_graph, find_cycle_path,
-    find_starting_node, load_graph, Node,
+    find_starting_node, load_graph,
 };
 
 const INPUT_DIR: &str = "input";
@@ -19,13 +19,12 @@ fn part_one(path: &str) {
     let mut adj_graph = create_adjacency_graph(&graph, max_pos);
     let starting_node = find_starting_node(&graph);
 
-    let cycle_length = find_cycle_path(starting_node, &mut adj_graph);
-
-    let cycle_length = cycle_length.iter().collect::<Vec<&Node>>().len();
+    let cycle_length = find_cycle_path(starting_node, &mut adj_graph).len();
 
     let furthest_distance = if cycle_length % 2 == 0 {
         cycle_length / 2
     } else {
+        // minus because path can have one element extra -- the starting node itself
         (cycle_length - 1) / 2
     };
 

@@ -164,7 +164,7 @@ impl Node {
             (0, -1, Direction::West),
         ];
 
-        let mut neighbors: Vec<Node> = vec![];
+        let mut neighbors: Vec<Node> = Vec::with_capacity(4); // max possible neighbors = 4
 
         for (delta_x, delta_y, dir) in relative_positions.iter() {
             let mut new_position_x = *x as isize + delta_x;
@@ -214,8 +214,7 @@ pub fn load_graph(input: &str) -> (Vec<Node>, Position) {
         .expect("there must be at least one row to compute no. of columns")
         .len();
 
-    // let mut graph: Vec<Node> = Vec::with_capacity(num_rows.saturating_mul(num_cols));
-    let mut graph: Vec<Node> = vec![];
+    let mut graph: Vec<Node> = Vec::with_capacity(num_rows.saturating_mul(num_cols));
 
     for (row, line) in input.lines().enumerate() {
         // dbg!(row);
@@ -327,34 +326,28 @@ mod tests {
     #[test]
     fn finds_cycle_length_correctly() {
         // Case 1:
-        let input: &str = "7-F7-
+        let inputs: Vec<&str> = vec![
+            "7-F7-
 .FJ|7
 SJLL7
 |F--J
-LJ.LJ";
-        let expected: usize = 16;
-        let (graph, max_pos) = load_graph(input);
-        let mut adj_graph = create_adjacency_graph(&graph, max_pos);
-
-        let starting_node = find_starting_node(&graph);
-
-        let cycle = find_cycle_path(starting_node, &mut adj_graph);
-        assert_eq!(cycle.len(), expected);
-
-        // Case 2:
-        let input: &str = "-L|F7
+LJ.LJ",
+            "-L|F7
 7S-7|
 L|7||
 -L-J|
-L|-JF";
-        let expected: usize = 8;
-        let (graph, max_pos) = load_graph(input);
-        let mut adj_graph = create_adjacency_graph(&graph, max_pos);
-        let starting_node = find_starting_node(&graph);
+L|-JF",
+        ];
+        let expected: Vec<usize> = vec![16, 8];
+        for (input, expected) in zip(inputs, expected) {
+            let (graph, max_pos) = load_graph(input);
+            let mut adj_graph = create_adjacency_graph(&graph, max_pos);
 
-        let cycle = find_cycle_path(starting_node, &mut adj_graph);
-        // dbg!(&cycle);
-        assert_eq!(cycle.len(), expected);
+            let starting_node = find_starting_node(&graph);
+
+            let cycle = find_cycle_path(starting_node, &mut adj_graph);
+            assert_eq!(cycle.len(), expected);
+        }
     }
 
     #[test]
