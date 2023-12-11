@@ -56,43 +56,79 @@ impl Node {
             },
             Node::Vertical(_) => match direction {
                 Direction::North => {
-                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                    matches!(
+                        other,
+                        Self::Vertical(_) | Self::Seven(_) | Self::F(_) | Self::S(_)
+                    )
                 }
-                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
+                Direction::South => matches!(
+                    other,
+                    Self::Vertical(_) | Self::J(_) | Self::L(_) | Self::S(_)
+                ),
                 _ => false,
             },
             Node::Horizontal(_) => match direction {
                 Direction::East => {
-                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                    matches!(
+                        other,
+                        Self::Horizontal(_) | Self::J(_) | Self::Seven(_) | Self::S(_)
+                    )
                 }
-                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
+                Direction::West => matches!(
+                    other,
+                    Self::Horizontal(_) | Self::F(_) | Self::L(_) | Self::S(_)
+                ),
                 _ => false,
             },
             Node::L(_) => match direction {
                 Direction::North => {
-                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                    matches!(
+                        other,
+                        Self::Vertical(_) | Self::Seven(_) | Self::F(_) | Self::S(_)
+                    )
                 }
                 Direction::East => {
-                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                    matches!(
+                        other,
+                        Self::Horizontal(_) | Self::J(_) | Self::Seven(_) | Self::S(_)
+                    )
                 }
                 _ => false,
             },
             Node::J(_) => match direction {
                 Direction::North => {
-                    matches!(other, Self::Vertical(_) | Self::Seven(_) | Self::F(_))
+                    matches!(
+                        other,
+                        Self::Vertical(_) | Self::Seven(_) | Self::F(_) | Self::S(_)
+                    )
                 }
-                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
+                Direction::West => matches!(
+                    other,
+                    Self::Horizontal(_) | Self::F(_) | Self::L(_) | Self::S(_)
+                ),
                 _ => false,
             },
             Node::Seven(_) => match direction {
-                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
-                Direction::West => matches!(other, Self::Horizontal(_) | Self::F(_) | Self::L(_)),
+                Direction::South => matches!(
+                    other,
+                    Self::Vertical(_) | Self::J(_) | Self::L(_) | Self::S(_)
+                ),
+                Direction::West => matches!(
+                    other,
+                    Self::Horizontal(_) | Self::F(_) | Self::L(_) | Self::S(_)
+                ),
                 _ => false,
             },
             Node::F(_) => match direction {
-                Direction::South => matches!(other, Self::Vertical(_) | Self::J(_) | Self::L(_)),
+                Direction::South => matches!(
+                    other,
+                    Self::Vertical(_) | Self::J(_) | Self::L(_) | Self::S(_)
+                ),
                 Direction::East => {
-                    matches!(other, Self::Horizontal(_) | Self::J(_) | Self::Seven(_))
+                    matches!(
+                        other,
+                        Self::Horizontal(_) | Self::J(_) | Self::Seven(_) | Self::S(_)
+                    )
                 }
                 _ => false,
             },
@@ -116,7 +152,7 @@ impl Node {
     pub fn neighbors(&self, graph: &[Node], max_pos: Position) -> Vec<Node> {
         let Position(x, y) = self.position();
         let Position(max_x, max_y) = max_pos;
-        let current_node = &graph[x * max_x + y];
+        let current_node = &graph[x * max_y + y];
         // dbg!(current_node);
 
         let (max_x, max_y) = (max_x as isize, max_y as isize);
@@ -196,7 +232,6 @@ pub fn load_graph(input: &str) -> (Vec<Node>, Position) {
 #[derive(Debug)]
 pub struct AdjacencyInfo {
     neighbors: Vec<Node>,
-    explored: bool,
 }
 
 pub fn create_adjacency_graph(graph: &[Node], max_pos: Position) -> HashMap<Node, AdjacencyInfo> {
@@ -205,70 +240,52 @@ pub fn create_adjacency_graph(graph: &[Node], max_pos: Position) -> HashMap<Node
 
     for node in graph.iter() {
         let neighbors = node.neighbors(graph, max_pos.clone());
-        adj_graph.entry(node.clone()).or_insert(AdjacencyInfo {
-            neighbors,
-            explored: false,
-        });
+        adj_graph
+            .entry(node.clone())
+            .or_insert(AdjacencyInfo { neighbors });
     }
 
     adj_graph
 }
 
-pub fn find_cycle_length(
+pub fn find_cycle_path(
     starting_node: &Node,
-    parent_node: Option<&Node>,
-    current_node: Option<&Node>,
-    distance: usize,
     adj_graph: &mut HashMap<Node, AdjacencyInfo>,
-) -> Option<usize> {
-    let mut local_distance = distance + 1;
-    let current_node = current_node.unwrap_or(starting_node);
-    let adjacency_info = adj_graph.get(current_node).unwrap_or_else(|| {
-        panic!(
-            "Node {:?} must be present in adj_graph",
-            starting_node.position()
-        )
-    });
+) -> Vec<Node> {
+    let mut path: Vec<Node> = vec![];
 
-    if adjacency_info.explored {
-        return None;
-    }
+    let mut current_node = starting_node;
+    let mut parent_node: Option<&Node> = None;
+    loop {
+        let neighbors = &adj_graph
+            .get(current_node)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Node {:?} must be present in adj_graph",
+                    starting_node.position()
+                )
+            })
+            .neighbors;
 
-    let neighbors = adjacency_info.neighbors.clone();
+        // dbg!(&parent_node, &current_node, &neighbors);
+        path.push(current_node.clone());
 
-    for neighbor in neighbors.iter() {
-        if parent_node.is_some() && neighbor == parent_node.unwrap() {
-            continue;
-        }
+        // always returns one node (from two neighbors -- one of which is the `parent_node`)
+        let next_node = neighbors
+            .iter()
+            .find(|n| parent_node.is_none() || *n != parent_node.unwrap())
+            .expect("at least one node must be present");
 
-        if neighbor == starting_node {
+        if next_node == starting_node {
             println!("Found starting_node again at {:?}", current_node);
-            return Some(distance);
+            break;
         }
 
-        // go deeper
-        let distance_to_cycle = find_cycle_length(
-            starting_node,
-            Some(current_node),
-            Some(neighbor),
-            local_distance,
-            adj_graph,
-        );
-        if distance_to_cycle.is_some() {
-            return distance_to_cycle;
-        }
-
-        // if you haven't found it yet, you haven't travelled
-        local_distance = distance + 1;
+        parent_node = Some(current_node);
+        current_node = next_node;
     }
 
-    // when we have inspect all of the current node's neighbors, it becomes explored
-    adj_graph
-        .entry(current_node.clone())
-        .and_modify(|v| v.explored = true);
-
-    // return original distance because none of the neighbors lead to the destination
-    Some(distance)
+    path
 }
 
 pub fn find_starting_node(graph: &[Node]) -> &Node {
@@ -282,8 +299,29 @@ pub fn find_starting_node(graph: &[Node]) -> &Node {
     unreachable!("starting node must be present");
 }
 
+/// Reference: https://en.wikipedia.org/wiki/Shoelace_formula
+pub fn calculate_double_loop_area(path: &[Node]) -> usize {
+    let path_len = path.len();
+
+    let mut area: isize = 0;
+    for i in 0..path_len - 1 {
+        let x_diff = path[i].position().0 as isize - path[i + 1].position().0 as isize;
+        let y_sum = (path[i].position().1 + path[i + 1].position().1) as isize;
+        area += x_diff * y_sum;
+    }
+
+    area.unsigned_abs()
+}
+
+/// Reference: https://en.wikipedia.org/wiki/Pick%27s_theorem
+pub fn calculate_inner_tiles(double_area: usize, loop_length: usize) -> usize {
+    (double_area + 2 - loop_length) / 2
+}
+
 #[cfg(test)]
 mod tests {
+    use std::iter::zip;
+
     use super::*;
 
     #[test]
@@ -294,16 +332,14 @@ mod tests {
 SJLL7
 |F--J
 LJ.LJ";
-        let expected: usize = 15;
+        let expected: usize = 16;
         let (graph, max_pos) = load_graph(input);
         let mut adj_graph = create_adjacency_graph(&graph, max_pos);
 
         let starting_node = find_starting_node(&graph);
 
-        assert_eq!(
-            find_cycle_length(starting_node, None, None, 0, &mut adj_graph),
-            Some(expected)
-        );
+        let cycle = find_cycle_path(starting_node, &mut adj_graph);
+        assert_eq!(cycle.len(), expected);
 
         // Case 2:
         let input: &str = "-L|F7
@@ -311,14 +347,62 @@ LJ.LJ";
 L|7||
 -L-J|
 L|-JF";
-        let expected: usize = 7;
+        let expected: usize = 8;
         let (graph, max_pos) = load_graph(input);
         let mut adj_graph = create_adjacency_graph(&graph, max_pos);
         let starting_node = find_starting_node(&graph);
 
-        assert_eq!(
-            find_cycle_length(starting_node, None, None, 0, &mut adj_graph),
-            Some(expected)
-        );
+        let cycle = find_cycle_path(starting_node, &mut adj_graph);
+        // dbg!(&cycle);
+        assert_eq!(cycle.len(), expected);
+    }
+
+    #[test]
+    fn calculates_num_inner_tiles_correctly() {
+        let inputs: Vec<&str> = vec![
+            "...........
+.S-------7.
+.|F-----7|.
+.||.....||.
+.||.....||.
+.|L-7.F-J|.
+.|..|.|..|.
+.L--J.L--J.
+...........",
+            "FF7FSF7F7F7F7F7F---7
+L|LJ||||||||||||F--J
+FL-7LJLJ||||||LJL-77
+F--JF--7||LJLJ7F7FJ-
+L---JF-JLJ.||-FJLJJ7
+|F|F-JF---7F7-L7L|7|
+|FFJF7L7F-JF7|JL---7
+7-L-JL7||F7|L7F-7F7|
+L.L7LFJ|||||FJL7||LJ
+L7JLJL-JLJLJL--JLJ.L",
+            ".F----7F7F7F7F-7....
+.|F--7||||||||FJ....
+.||.FJ||||||||L7....
+FJL7L7LJLJ||LJ.L-7..
+L--J.L7...LJS7F-7L7.
+....F-J..F7FJ|L7L7L7
+....L7.F7||L7|.L7L7|
+.....|FJLJ|FJ|F7|.LJ
+....FJL-7.||.||||...
+....L---J.LJ.LJLJ...",
+        ];
+        let expected_values: Vec<usize> = vec![4, 10, 8];
+
+        for (input, expected) in zip(inputs, expected_values) {
+            let (graph, max_pos) = load_graph(input);
+            let mut adj_graph = create_adjacency_graph(&graph, max_pos);
+            let starting_node = find_starting_node(&graph);
+
+            let cycle = find_cycle_path(starting_node, &mut adj_graph);
+            // dbg!(&cycle);
+            let double_area = calculate_double_loop_area(&cycle);
+            let num_inner_tiles = calculate_inner_tiles(double_area, cycle.len());
+
+            assert_eq!(num_inner_tiles, expected);
+        }
     }
 }
