@@ -48,8 +48,6 @@ pub struct Lens {
 pub fn sum_focusing_power(boxes: &[Vec<Lens>]) -> usize {
     let mut sum = 0;
     for (box_num, v) in boxes.iter().enumerate() {
-        // println!("{k:?} => {box_num}");
-
         for (i, lens) in v.iter().enumerate() {
             sum += (box_num + 1) * (i + 1) * usize::from(lens.focal_length);
         }
@@ -152,10 +150,7 @@ mod tests {
     fn calculates_focusing_power_correctly() {
         let input: &str = "rn=1,cm-,qp=3,cm=2,qp-,pc=4,ot=9,ab=5,pc-,pc=6,ot=7";
         let boxes = form_boxes(input);
-        dbg!(&boxes);
 
-        let focussing_power = sum_focusing_power(&boxes);
-
-        assert_eq!(focussing_power, 145);
+        assert_eq!(sum_focusing_power(&boxes), 145);
     }
 }
