@@ -1,5 +1,7 @@
 use svg::{node::element::Circle, Document};
 
+const INITIAL_POINT: usize = 10000000;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Point {
     pub position: (usize, usize),
@@ -26,11 +28,20 @@ pub enum Direction {
 impl Direction {
     pub fn from_char(ch: &char) -> Self {
         match ch {
-            'R' => Self::R,
-            'L' => Self::L,
-            'U' => Self::U,
-            'D' => Self::D,
+            'R' | '0' => Self::R,
+            'L' | '2' => Self::L,
+            'U' | '3' => Self::U,
+            'D' | '1' => Self::D,
             _ => panic!("Invalid direction: {ch} found"),
+        }
+    }
+
+    pub fn to_char(&self) -> char {
+        match self {
+            Direction::R => 'R',
+            Direction::L => 'L',
+            Direction::D => 'D',
+            Direction::U => 'U',
         }
     }
 }
@@ -53,8 +64,8 @@ pub fn parse(input: &str) -> Vec<Point> {
     let mut dig_plan: Vec<Point> = vec![];
 
     // start somewhere in the middle
-    let mut x: usize = 400;
-    let mut y: usize = 400;
+    let mut x: usize = INITIAL_POINT;
+    let mut y: usize = INITIAL_POINT;
 
     for line in input.lines() {
         let values: [&str; 3] = line
@@ -73,14 +84,14 @@ pub fn parse(input: &str) -> Vec<Point> {
             .strip_suffix(')')
             .expect("third value in the line must end with `)`");
 
-        for _ in 0..distance {
-            (x, y) = next_point((x, y), distance, &direction);
-            let new_point = Point::from((x, y), color);
-            if dig_plan.contains(&new_point) {
-                continue;
-            }
-            dig_plan.push(new_point);
+        // for _ in 0..distance {
+        (x, y) = next_point((x, y), distance, &direction);
+        let new_point = Point::from((x, y), color);
+        if dig_plan.contains(&new_point) {
+            continue;
         }
+        dig_plan.push(new_point);
+        // }
     }
 
     dig_plan
@@ -89,18 +100,26 @@ pub fn parse(input: &str) -> Vec<Point> {
 pub fn calculate_lava_volume(dig_plan: &[Point]) -> usize {
     let path_len = dig_plan.len();
 
+    let mut perimeter: usize = dig_plan[0].position.0.abs_diff(INITIAL_POINT)
+        + dig_plan[0].position.1.abs_diff(INITIAL_POINT);
+
     // Shoelace formula
     let mut double_area: isize = 0;
     for i in 0..path_len - 1 {
         let x_diff = dig_plan[i].position.0 as isize - dig_plan[i + 1].position.0 as isize;
+        let y_diff = dig_plan[i].position.1 as isize - dig_plan[i + 1].position.1 as isize;
+        // dbg!(x_diff, y_diff);
         let y_sum = (dig_plan[i].position.1 + dig_plan[i + 1].position.1) as isize;
+
         double_area += x_diff * y_sum;
+        // one of x_diff and y_diff will always be zero
+        perimeter += (x_diff + y_diff).unsigned_abs();
     }
 
     let double_area = double_area.unsigned_abs();
-    let inner_holes = (double_area + 2 - path_len) / 2; // Pick's theorem
+    let inner_holes = (double_area + 2 - perimeter) / 2; // Pick's theorem
 
-    inner_holes + path_len
+    inner_holes + perimeter
 }
 
 pub fn create_matrix(dig_plan: &[Point]) -> Vec<Vec<String>> {
@@ -117,7 +136,7 @@ pub fn create_matrix(dig_plan: &[Point]) -> Vec<Vec<String>> {
         }
     }
 
-    dbg!(max_x, max_y);
+    // dbg!(max_x, max_y);
     let mut matrix: Vec<Vec<String>> = vec![vec!["".to_string(); max_y]; max_x];
 
     for point in dig_plan {
@@ -148,6 +167,28 @@ pub fn convert_matrix_to_svg(matrix: &[Vec<String>], path: &str) {
     svg::save(path, &document).unwrap();
 }
 
+pub fn create_actual_input(corrupted_input: &[Point]) -> String {
+    let mut actual_input = String::new();
+
+    for point in corrupted_input {
+        let color = point.color.clone();
+        let direction = Direction::from_char(
+            &color
+                .chars()
+                .last()
+                .expect("Color must have at least one char"),
+        );
+        let distance = color.chars().take(color.len() - 1).collect::<String>();
+        let distance = distance.strip_prefix('#').expect("Color must begin with #");
+        let distance = usize::from_str_radix(distance, 16)
+            .expect("First four chars of color except # must be a valid hex");
+
+        actual_input.push_str(&format!("{} {distance} ({color})\n", direction.to_char()));
+    }
+
+    actual_input.strip_suffix('\n').unwrap().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,9 +212,33 @@ U 2 (#7a21e3)";
 
         let dig_plan = parse(input);
 
-        let matrix = create_matrix(&dig_plan);
-        convert_matrix_to_svg(&matrix, "test_path.svg");
+        // let matrix = create_matrix(&dig_plan);
+        // convert_matrix_to_svg(&matrix, "test_path.svg");
 
         assert_eq!(calculate_lava_volume(&dig_plan), 62);
+    }
+
+    #[test]
+    fn calculates_actual_area_correctly() {
+        let corrupted_input: &str = "R 6 (#70c710)
+D 5 (#0dc571)
+L 2 (#5713f0)
+D 2 (#d2c081)
+R 2 (#59c680)
+D 2 (#411b91)
+L 5 (#8ceee2)
+U 2 (#caa173)
+L 1 (#1b58a2)
+U 2 (#caa171)
+R 2 (#7807d2)
+U 3 (#a77fa3)
+L 2 (#015232)
+U 2 (#7a21e3)";
+
+        let dig_plan = parse(corrupted_input);
+        let corrected_input = create_actual_input(&dig_plan);
+        let actual_dig_plan = parse(&corrected_input);
+
+        assert_eq!(calculate_lava_volume(&actual_dig_plan), 952408144115);
     }
 }
