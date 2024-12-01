@@ -1,0 +1,89 @@
+name: haskell
+version: 2024.0
+github: "Rajil1213/advent-of-code"
+license: MIT
+author: "Rajil Bajracharya"
+maintainer: "imrb1213@gmail.com"
+copyright: "2024 Rajil Bajracharya"
+
+extra-source-files:
+  - README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description: Solutions to Advent of Code 2024 problems in Haskell
+
+dependencies:
+  - base >= 4.7 && < 5
+  - time
+  - ansi-terminal
+  - directory
+  - optparse-applicative
+  - parser-combinators
+  - attoparsec
+  - containers
+  - text
+  - mtl
+  - vector
+  - hspec
+
+library:
+  source-dirs: src
+  default-extensions:
+    - LambdaCase
+    - MultiWayIf
+    - RecordWildCards
+    - OverloadedRecordDot
+    - OverloadedStrings
+    - ImportQualifiedPost
+    - GADTs
+    - GHC2021
+
+executables:
+  haskell-exe:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N4
+      - -with-rtsopts=-qa
+      - -with-rtsopts=-C0
+      - -funfolding-use-threshold=16
+      - -fexcess-precision
+      - -optc-O3
+      - -optc-ffast-math
+      - -O2
+    default-extensions:
+      - LambdaCase
+      - MultiWayIf
+      - RecordWildCards
+      - OverloadedRecordDot
+      - OverloadedStrings
+      - ImportQualifiedPost
+      - GADTs
+      - GHC2021
+    dependencies:
+      - haskell
+
+tests:
+  haskell-test:
+    main: Spec.hs
+    source-dirs: test
+    default-extensions:
+      - LambdaCase
+      - MultiWayIf
+      - RecordWildCards
+      - OverloadedRecordDot
+      - OverloadedStrings
+      - ImportQualifiedPost
+      - GADTs
+      - GHC2021
+    dependencies:
+      - haskell
+      - hspec
