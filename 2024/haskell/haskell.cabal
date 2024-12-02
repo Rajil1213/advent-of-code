@@ -116,6 +116,7 @@ test-suite haskell-test
   main-is: Spec.hs
   other-modules:
       Day01Spec
+      Day02Spec
       Paths_haskell
   hs-source-dirs:
       test
