@@ -120,6 +120,7 @@ test-suite haskell-test
       Day01Spec
       Day02Spec
       Day03Spec
+      Day04Spec
       Paths_haskell
   hs-source-dirs:
       test
