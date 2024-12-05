@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 
-members = ["day01", "day02", "day04"]
+members = ["day01", "day02", "day04", "day05"]
 
 [workspace.dependencies]
 rstest = "0.23.0"
