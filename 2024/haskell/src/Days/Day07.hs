@@ -1,4 +1,4 @@
-module Days.Day07 (runDay, partA, partB, inputParser, lineParser) where
+module Days.Day07 (runDay, partA, partB, inputParser, lineParser, dfs, getOperator, Operation (Add, Multiply, Concatenate)) where
 
 import Data.List (sort)
 import Data.Map.Strict (Map)
@@ -19,20 +19,19 @@ runDay = R.runDay inputParser partA partB
 
 ------------ PARSER ------------
 inputParser :: Parser Input
-inputParser = do
-  pairs <- many' lineParser
-  return (map fst pairs, map snd pairs)
+inputParser = many' lineParser
 
-lineParser :: Parser (Int, Int)
+lineParser :: Parser (Int, [Int])
 lineParser = do
-  a <- decimal
+  testVal <- decimal
+  char ':'
   skipSpace
-  b <- decimal
+  values <- decimal `sepBy` char ' '
   endOfLine <|> endOfInput
-  return (a, b)
+  return (testVal, values)
 
 ------------ TYPES ------------
-type Input = ([Int], [Int])
+type Input = [(Int, [Int])]
 
 type OutputA = Int
 
@@ -40,16 +39,34 @@ type OutputB = Int
 
 ------------ PART A ------------
 partA :: Input -> OutputA
-partA pair = sum . map abs $ zipWith (-) (sort firstList) (sort secondList)
- where
-  firstList = fst pair
-  secondList = snd pair
+partA lines = sum $ map fst $ filter (\line -> dfs (fst line) [Add, Multiply] (snd line) 0) lines
 
 ------------ PART B ------------
 partB :: Input -> OutputB
-partB pair = sum score
- where
-  score = [x * x `countElem` snd pair | x <- fst pair]
+partB lines = sum $ map fst $ filter (\line -> dfs (fst line) [Add, Multiply, Concatenate] (snd line) 0) lines
 
-countElem :: Int -> [Int] -> Int
-countElem x lst = length [a | a <- lst, x == a]
+------------ COMMON ------------
+data Operation = Add | Multiply | Concatenate
+
+getOperator :: Operation -> (Int -> Int -> Int)
+getOperator op = case op of
+  Add -> (+)
+  Multiply -> (*)
+  Concatenate -> \a b -> read (show a ++ show b)
+
+dfs :: Int -> [Operation] -> [Int] -> Int -> Bool
+dfs target operations [] curTotal = False
+dfs target operations [value] curTotal =
+  or
+    [ newTotal == target
+    | operation <- operations
+    , let op = getOperator operation
+    , let newTotal = curTotal `op` value
+    ]
+dfs target operations (value : rest) curTotal =
+  or
+    [ newTotal <= target && dfs target operations rest newTotal
+    | operation <- operations
+    , let op = getOperator operation
+    , let newTotal = curTotal `op` value
+    ]
