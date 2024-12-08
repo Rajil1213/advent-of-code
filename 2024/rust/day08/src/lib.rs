@@ -52,20 +52,11 @@ impl From<Position> for (usize, usize) {
 
 impl Position {
     pub fn antinode(&self, other: &Position) -> (Self, Self) {
-        let delta_x = self.x.abs_diff(other.x) as isize;
-        let delta_y = self.y.abs_diff(other.y) as isize;
+        let delta_x = self.x - other.x;
+        let delta_y = self.y - other.y;
 
-        let (next_x1, next_x2) = if self.x > other.x {
-            (self.x + delta_x, other.x - delta_x)
-        } else {
-            (self.x - delta_x, other.x + delta_x)
-        };
-
-        let (next_y1, next_y2) = if self.y > other.y {
-            (self.y + delta_y, other.y - delta_y)
-        } else {
-            (self.y - delta_y, other.y + delta_y)
-        };
+        let (next_x1, next_x2) = (self.x + delta_x, other.x - delta_x);
+        let (next_y1, next_y2) = (self.y + delta_y, other.y - delta_y);
 
         ((next_x1, next_y1).into(), (next_x2, next_y2).into())
     }
@@ -79,39 +70,25 @@ impl Position {
         other: &Position,
         max_position: &Position,
     ) -> Vec<Position> {
-        let delta_x = self.x.abs_diff(other.x) as isize;
-        let delta_y = self.y.abs_diff(other.y) as isize;
+        let delta_x = self.x - other.x;
+        let delta_y = self.y - other.y;
 
-        let (next_x1s, next_x2s) = if self.x > other.x {
-            (
-                Self::get_possible_locs(self.x, delta_x, max_position.x),
-                Self::get_possible_locs(other.x, -delta_x, max_position.x),
-            )
-        } else {
-            (
-                Self::get_possible_locs(self.x, -delta_x, max_position.x),
-                Self::get_possible_locs(other.x, delta_x, max_position.x),
-            )
-        };
+        let (next_x1s, next_x2s) = (
+            Self::get_possible_locs(self.x, delta_x, max_position.x),
+            Self::get_possible_locs(other.x, -delta_x, max_position.x),
+        );
 
-        let (next_y1s, next_y2s) = if self.y > other.y {
-            (
-                Self::get_possible_locs(self.y, delta_y, max_position.y),
-                Self::get_possible_locs(other.y, -delta_y, max_position.y),
-            )
-        } else {
-            (
-                Self::get_possible_locs(self.y, -delta_y, max_position.y),
-                Self::get_possible_locs(other.y, delta_y, max_position.y),
-            )
-        };
+        let (next_y1s, next_y2s) = (
+            Self::get_possible_locs(self.y, delta_y, max_position.y),
+            Self::get_possible_locs(other.y, -delta_y, max_position.y),
+        );
 
         let antinodes_1 = next_x1s.into_iter().zip(next_y1s).map(Position::from);
 
         let mut antinodes_2 = next_x2s
             .into_iter()
             .zip(next_y2s)
-            .map(|pos| pos.into())
+            .map(Position::from)
             .collect::<Vec<Position>>();
 
         antinodes_2.extend(antinodes_1);
