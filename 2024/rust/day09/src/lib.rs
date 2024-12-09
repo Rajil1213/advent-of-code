@@ -85,7 +85,7 @@ pub fn part_two(file_blocks: &FileBlocks, space_blocks: &SpaceBlocks) -> usize {
                     None
                 }
             })
-            .collect::<FileBlocks>();
+            .collect::<Vec<_>>();
 
         if updated_consolidated_files.is_empty() {
             break;
